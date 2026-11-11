@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0f1216">
+<title>六级词汇 · 刷卡背</title>
+<style>
+  :root{
+    --bg:#0e1116; --card:#171d25; --line:#263041; --ink:#e9eef5; --sub:#8b98a8;
+    --ok:#3ddc97; --mid:#f0a35e; --bad:#e06c75; --accent:#4c8dff;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font:15px/1.55 -apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    display:flex;flex-direction:column;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  header{padding:12px 16px 8px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+  header h1{font-size:15px;margin:0;font-weight:600;letter-spacing:.3px}
+  .chips{display:flex;gap:6px;font-size:11px;color:var(--sub);flex-wrap:wrap;justify-content:flex-end}
+  .chip{border:1px solid var(--line);border-radius:99px;padding:3px 8px;white-space:nowrap}
+  .chip b{color:var(--ink);font-weight:600}
+  main{flex:1;display:flex;flex-direction:column;min-height:0;padding:0 16px 8px;overflow:hidden}
+  .view{flex:1;display:none;flex-direction:column;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch}
+  .view.on{display:flex}
+
+  /* 学习卡片 */
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:18px;
+    padding:26px 20px;margin:6px 0 12px;min-height:46vh;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+    text-align:center;position:relative;flex:none;
+  }
+  .word{font-size:34px;font-weight:700;letter-spacing:.2px;word-break:break-word;line-height:1.2}
+  .pos{display:inline-block;font-size:11.5px;color:#9fd0ff;background:#1d2a3a;border:1px solid #2b3d55;border-radius:6px;padding:1px 8px;margin-bottom:4px;letter-spacing:.3px}
+  .pos.guess{color:#7f8ea3;border-color:#263041;background:#151b23}
+  .tiny{font-size:10.5px;color:#7f8ea3;font-weight:400;margin-left:4px}
+  .phonetic{color:var(--sub);font-size:14px;font-family:ui-monospace,Consolas,monospace}
+  .meaning{font-size:19px;line-height:1.5;color:#cfe3ff;max-width:100%;word-break:break-word}
+  .meaning.soft{color:var(--sub);font-size:14px}
+  .speak{background:none;border:1px solid var(--line);color:var(--sub);border-radius:99px;
+         padding:5px 12px;font-size:13px;cursor:pointer}
+  .hint{color:var(--sub);font-size:12px;margin-top:4px}
+  .group{position:absolute;top:10px;left:12px;font-size:10.5px;color:#5f6d7e;max-width:70%;
+         white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .idx{position:absolute;top:10px;right:12px;font-size:10.5px;color:#5f6d7e}
+
+  /* 按钮 */
+  .row{display:flex;gap:10px;margin:2px 0 6px}
+  button{font-family:inherit}
+  .btn{flex:1;border:none;border-radius:14px;padding:16px 10px;font-size:16px;font-weight:600;
+       color:#0b1210;cursor:pointer;min-height:54px}
+  .btn:active{transform:scale(.985)}
+  .btn.bad{background:#f0d0d3;color:#7d1f28}
+  .btn.mid{background:#f6e2cb;color:#7a4a13}
+  .btn.ok{background:var(--ok);color:#08251a}
+  .btn.ghost{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+  .btn.big{width:100%;padding:18px;background:var(--accent);color:#fff;font-size:16px}
+
+  .bar{height:6px;background:#1d2530;border-radius:99px;overflow:hidden;margin:4px 0 10px}
+  .bar i{display:block;height:100%;background:linear-gradient(90deg,#3ddc97,#4c8dff);width:0;transition:width .3s}
+
+  .empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+         gap:10px;color:var(--sub);text-align:center;padding:30px 10px}
+  .empty .big{font-size:44px}
+
+  /* 词表 */
+  .toolbar{display:flex;gap:8px;margin:6px 0 10px}
+  input[type=search]{flex:1;background:var(--card);border:1px solid var(--line);color:var(--ink);
+        border-radius:12px;padding:11px 14px;font-size:14px;outline:none}
+  .list{display:flex;flex-direction:column;gap:6px;padding-bottom:20px}
+  .item{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 12px;
+        display:flex;justify-content:space-between;gap:10px;align-items:center}
+  .item .l{min-width:0}
+  .item .w{font-weight:600;font-size:15px}
+  .item .m{color:var(--sub);font-size:12.5px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .dot{width:9px;height:9px;border-radius:99px;flex:none}
+  .d0{background:#4a5566}.d1{background:var(--bad)}.d2{background:var(--mid)}.d3{background:#8bd3ff}.d4{background:var(--ok)}
+
+  /* 统计 */
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+  .stat .k{color:var(--sub);font-size:12px}
+  .stat .v{font-size:24px;font-weight:700;margin-top:2px}
+  .note{color:var(--sub);font-size:12px;margin:8px 0}
+  .settings{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:10px 0}
+  .settings label{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:14px}
+  .settings input[type=range]{flex:1;accent-color:var(--accent)}
+  .settings .val{width:46px;text-align:right;color:var(--accent);font-weight:600}
+  .danger{color:var(--bad)}
+
+  /* 底部导航 */
+  nav{display:flex;border-top:1px solid var(--line);background:#0b0e13;padding:6px 8px calc(6px + env(safe-area-inset-bottom))}
+  nav button{flex:1;background:none;border:none;color:var(--sub);font-size:11.5px;padding:8px 4px;
+             display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer}
+  nav button.on{color:var(--ink)}
+  nav button i{font-size:17px;font-style:normal}
+</style>
+</head>
+<body>
+<noscript><div style="padding:14px;background:#7a1f1f;color:#fff;font-size:13px">这个页面需要 JavaScript。请用 Safari / Chrome 打开，不要用微信文件预览。</div></noscript>
+<script>
+window.addEventListener('error', function(e){
+  var d = document.createElement('div');
+  d.style.cssText = 'position:fixed;left:8px;right:8px;bottom:86px;background:#5a1d1d;color:#fff;padding:10px 12px;border-radius:10px;font-size:12px;z-index:99;line-height:1.4';
+  d.textContent = 'JS 错误：' + (e.message || e.error) + ' @' + (e.lineno || '?');
+  document.body.appendChild(d);
+});
+</script>
+<header>
+  <h1>六级词汇 · 刷卡背</h1>
+  <div class="chips">
+    <span class="chip">今日 <b id="cToday">0</b>/<span id="cGoal">20</span></span>
+    <span class="chip">连续 <b id="cStreak">0</b> 天</span>
+    <span class="chip">掌握 <b id="cMaster">0</b></span>
+  </div>
+</header>
+
+<main>
+  <section class="view on" id="vStudy">
+    <div class="bar"><i id="progBar"></i></div>
+    <div class="card" id="card">
+      <div class="group" id="cGroup"></div>
+      <div class="idx" id="cIdx"></div>
+      <div class="pos" id="cPos"></div>
+      <div class="word" id="cWord">加载中…</div>
+      <div class="phonetic" id="cPhon"></div>
+      <button class="speak" id="cSpeak">🔊 发音</button>
+      <div class="meaning" id="cMean" style="display:none"></div>
+      <div class="hint" id="cHint">先自己想 3 秒，再点开</div>
+    </div>
+
+    <div id="frontBtns"><button class="btn big" id="btnShow">显示释义</button></div>
+    <div id="rateBtns" style="display:none">
+      <div class="row">
+        <button class="btn bad" data-q="1">不会</button>
+        <button class="btn mid" data-q="2">模糊</button>
+        <button class="btn ok" data-q="3">会</button>
+      </div>
+      <div class="hint" style="text-align:center">3 秒内想起来选「会」，犹豫就选「模糊」</div>
+    </div>
+
+    <div class="empty" id="studyDone" style="display:none">
+      <div class="big">✅</div>
+      <div>今天的新词和到期复习都清完了</div>
+      <div class="note">睡前再扫一遍今天标记「不会」的词，记得更牢</div>
+    </div>
+  </section>
+
+  <section class="view" id="vReview">
+    <div class="bar"><i id="revBar"></i></div>
+    <div class="card" id="rcard">
+      <div class="group" id="rGroup"></div>
+      <div class="word" id="rWord">—</div>
+      <div class="phonetic" id="rPhon"></div>
+      <button class="speak" id="rSpeak">🔊 发音</button>
+      <div class="meaning" id="rMean" style="display:none"></div>
+    </div>
+    <div id="rFront"><button class="btn big" id="rShow">显示释义</button></div>
+    <div id="rRate" style="display:none">
+      <div class="row">
+        <button class="btn bad" data-q="1">不会</button>
+        <button class="btn mid" data-q="2">模糊</button>
+        <button class="btn ok" data-q="3">会</button>
+      </div>
+    </div>
+    <div class="empty" id="reviewDone"><div class="big">🌙</div><div>今天没有到期的词</div><div class="note">去「学习」看看新词，或明天再来</div></div>
+  </section>
+
+  <section class="view" id="vList">
+    <div class="toolbar"><input type="search" id="search" placeholder="搜索单词或中文…"></div>
+    <div class="list" id="list"></div>
+  </section>
+
+  <section class="view" id="vStats">
+    <div class="grid">
+      <div class="stat"><div class="k">总词数</div><div class="v" id="sTotal">0</div></div>
+      <div class="stat"><div class="k">已掌握（≥4 格）</div><div class="v" id="sMaster">0</div></div>
+      <div class="stat"><div class="k">学习中</div><div class="v" id="sLearning">0</div></div>
+      <div class="stat"><div class="k">未开始</div><div class="v" id="sNew">0</div></div>
+      <div class="stat"><div class="k">累计作答</div><div class="v" id="sSeen">0</div></div>
+      <div class="stat"><div class="k">正确率</div><div class="v" id="sAcc">—</div></div>
+    </div>
+    <div class="settings">
+      <label>每日新词 <input type="range" id="goal" min="5" max="50" step="5"><span class="val" id="goalVal">20</span></label>
+      <div class="note">复习量会自动叠加，建议新词 20、复习不超过 60。</div>
+    </div>
+    <div class="settings">
+      <div class="note">数据只存在这台手机的浏览器里（localStorage）。换设备请先导出。</div>
+      <div class="row">
+        <button class="btn ghost" id="exportBtn">导出备份</button>
+        <button class="btn ghost" id="importBtn">导入备份</button>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn ghost danger" id="resetBtn">清空进度</button>
+      </div>
+      <textarea id="io" style="display:none;width:100%;height:90px;margin-top:8px;background:#0b0e13;
+        color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px;font-size:11px"></textarea>
+    </div>
+    <div class="note" id="diag" style="color:#66758a"></div>
+    <div class="note" id="tip">记忆规则：会 → 进下一格（1/2/4/7/15 天后再见）；模糊 → 明天再见；不会 → 回到第 1 格。</div>
+  </section>
+</main>
+
+<nav>
+  <button data-v="vStudy" class="on"><i>📚</i>学习</button>
+  <button data-v="vReview"><i>🔁</i>复习</button>
+  <button data-v="vList"><i>📋</i>词表</button>
+  <button data-v="vStats"><i>⚙️</i>统计</button>
+</nav>
+
+<script>
+const WORDS = [{"w":"journal","p":"/ˈdʒɜːnl/","m":"学术期刊；杂志","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"n.","posSrc":"manual"},{"w":"journal editor","p":"","m":"期刊编辑","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"短语","posSrc":"doc"},{"w":"publish","p":"/ˈpʌblɪʃ/","m":"发表，出版","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"v.","posSrc":"manual"},{"w":"affect","p":"/əˈfekt/","m":"影响（affecting 现在分词）","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"v.","posSrc":"manual"},{"w":"academic","p":"/ˌækəˈdemɪk/","m":"科研人员，学者；adj. 学术的","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"adj.","posSrc":"doc"},{"w":"influence","p":"/ˈɪnfluəns/","m":"v./n. 影响","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"v./n.","posSrc":"doc"},{"w":"field","p":"/fiːld/","m":"领域","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"n.","posSrc":"manual"},{"w":"establish","p":"/ɪˈstæblɪʃ/","m":"建立；组建","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"v.","posSrc":"manual"},{"w":"diverse","p":"/daɪˈvɜːs/","m":"多元的，多种多样的","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"adj.","posSrc":"manual"},{"w":"editorial","p":"/ˌedɪˈtɔːriəl/","m":"编辑的","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"adj.","posSrc":"manual"},{"w":"board","p":"/bɔːd/","m":"委员会","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"n.","posSrc":"manual"},{"w":"editorial board","p":"","m":"编委会","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"短语","posSrc":"doc"},{"w":"reflect","p":"/rɪˈflekt/","m":"反映，体现","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"v.","posSrc":"manual"},{"w":"a variety of","p":"","m":"各种各样的","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"短语","posSrc":"doc"},{"w":"identity","p":"/aɪˈdentəti/","m":"身份","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"n.","posSrc":"manual"},{"w":"unfortunately","p":"/ʌnˈfɔːtʃənətli/","m":"不幸地","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"adv.","posSrc":"manual"},{"w":"make for","p":"","m":"造成，导致；带来（某种感受）","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"短语","posSrc":"doc"},{"w":"disheartening","p":"/dɪsˈhɑːtnɪŋ/","m":"令人沮丧的","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"adj.","posSrc":"manual"},{"w":"majority","p":"/məˈdʒɒrəti/","m":"大多数","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"n.","posSrc":"manual"},{"w":"psychology","p":"/saɪˈkɒlədʒi/","m":"心理学","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"n.","posSrc":"manual"},{"w":"neuroscience","p":"/ˈnjʊərəʊsaɪəns/","m":"神经科学","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"n.","posSrc":"manual"},{"w":"amplify","p":"/ˈæmplɪfaɪ/","m":"放大，加剧","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"v.","posSrc":"manual"},{"w":"existing","p":"/ɪɡˈzɪstɪŋ/","m":"现存的","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"adj.","posSrc":"manual"},{"w":"gender","p":"/ˈdʒendə(r)/","m":"性别","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"n.","posSrc":"manual"},{"w":"inequality","p":"/ˌɪnɪˈkwɒləti/","m":"不平等","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"n.","posSrc":"manual"},{"w":"account for","p":"","m":"占（比例）；解释","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"短语","posSrc":"doc"},{"w":"significantly","p":"/sɪɡˈnɪfɪkəntli/","m":"显著地；明显地","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"adv.","posSrc":"manual"},{"w":"seniority","p":"/ˌsiːniˈɒrəti/","m":"资历，级别","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"n.","posSrc":"manual"},{"w":"make up","p":"","m":"构成，占比","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"短语","posSrc":"doc"},{"w":"crucially","p":"/ˈkruːʃəli/","m":"关键地，至关重要地","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"adv.","posSrc":"manual"},{"w":"proportion","p":"/prəˈpɔːʃn/","m":"比例","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"n.","posSrc":"manual"},{"w":"overall","p":"/ˌəʊvərˈɔːl/","m":"adj. 总体的","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"adj.","posSrc":"doc"},{"w":"starker","p":"/ˈstɑːkə(r)/","m":"（stark 比较级）明显的，悬殊的","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"adj.","posSrc":"manual"},{"w":"hold","p":"/həʊld/","m":"担任（职位）；持有","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"v.","posSrc":"manual"},{"w":"reveal","p":"/rɪˈviːl/","m":"揭示，显示","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"v.","posSrc":"manual"},{"w":"enduring","p":"/ɪnˈdjʊərɪŋ/","m":"持久的，长期存在的","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"adj.","posSrc":"manual"},{"w":"disparity","p":"/dɪˈspærəti/","m":"差距，不平等（=inequality）","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"n.","posSrc":"manual"},{"w":"broadly","p":"/ˈbrɔːdli/","m":"大体上，广泛地","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"adv.","posSrc":"manual"},{"w":"conclude","p":"/kənˈkluːd/","m":"得出结论","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"v.","posSrc":"manual"},{"w":"bias","p":"/ˈbaɪəs/","m":"偏见，偏向","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"n.","posSrc":"manual"},{"w":"overrepresented","p":"/ˌəʊvəˌreprɪˈzentɪd/","m":"占比过高的；代表过多的","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"adj.","posSrc":"manual"},{"w":"recognized","p":"/ˈrekəɡnaɪzd/","m":"公认的，知名的","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"adj.","posSrc":"manual"},{"w":"affect the careers of academics","p":"","m":"影响学者的职业生涯","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"短语","posSrc":"doc"},{"w":"influence the direction that a field takes","p":"","m":"影响学科发展方向","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"短语","posSrc":"doc"},{"w":"establish a diverse editorial board","p":"","m":"组建多元化编委会","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"短语","posSrc":"doc"},{"w":"amplify gender inequalities","p":"","m":"加剧性别不平等","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"短语","posSrc":"doc"},{"w":"make up the majority","p":"","m":"构成主体，占大多数","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"短语","posSrc":"doc"},{"w":"enduring gender disparities","p":"","m":"长期存在的性别差距","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"短语","posSrc":"doc"},{"w":"decision-making biases","p":"","m":"决策偏见","g":"第一篇｜编辑部与性别不平等（按文章顺序）","pos":"短语","posSrc":"doc"},{"w":"equity","p":"/ˈekwəti/","m":"公平，公正（本篇核心词）；inequity 不公平","g":"第二篇｜社会种族公平主题核心词汇","pos":"n.","posSrc":"manual"},{"w":"income","p":"/ˈɪnkʌm/","m":"收入；lifetime income 终身收入","g":"第二篇｜社会种族公平主题核心词汇","pos":"n.","posSrc":"manual"},{"w":"division","p":"/dɪˈvɪʒn/","m":"分歧，分裂","g":"第二篇｜社会种族公平主题核心词汇","pos":"n.","posSrc":"manual"},{"w":"polarization","p":"/ˌpəʊləraɪˈzeɪʃn/","m":"两极分化","g":"第二篇｜社会种族公平主题核心词汇","pos":"n.","posSrc":"manual"},{"w":"intolerance","p":"/ɪnˈtɒlərəns/","m":"不包容，偏执","g":"第二篇｜社会种族公平主题核心词汇","pos":"n.","posSrc":"manual"},{"w":"status quo","p":"","m":"现状","g":"第二篇｜社会种族公平主题核心词汇","pos":"短语","posSrc":"doc"},{"w":"barrier","p":"/ˈbæriə(r)/","m":"障碍","g":"第二篇｜社会种族公平主题核心词汇","pos":"n.","posSrc":"manual"},{"w":"conscience","p":"/ˈkɒnʃəns/","m":"良知","g":"第二篇｜社会种族公平主题核心词汇","pos":"n.","posSrc":"manual"},{"w":"address","p":"/əˈdres/","m":"①解决，处理（问题）②发表演讲；致辞","g":"第二篇｜社会种族公平主题核心词汇","pos":"v.","posSrc":"manual"},{"w":"confront","p":"/kənˈfrʌnt/","m":"直面，正视","g":"第二篇｜社会种族公平主题核心词汇","pos":"v.","posSrc":"manual"},{"w":"bridge","p":"/brɪdʒ/","m":"弥合（差距）；n. 桥；bridge differences 弥合分歧","g":"第二篇｜社会种族公平主题核心词汇","pos":"n.","posSrc":"doc"},{"w":"disrupt","p":"/dɪsˈrʌpt/","m":"打破，扰乱","g":"第二篇｜社会种族公平主题核心词汇","pos":"v.","posSrc":"manual"},{"w":"haunt","p":"/hɔːnt/","m":"萦绕，困扰","g":"第二篇｜社会种族公平主题核心词汇","pos":"v.","posSrc":"manual"},{"w":"compel","p":"/kəmˈpel/","m":"迫使，强迫","g":"第二篇｜社会种族公平主题核心词汇","pos":"v.","posSrc":"manual"},{"w":"tackle","p":"/ˈtækl/","m":"处理，应对（address 同义替换）","g":"第二篇｜社会种族公平主题核心词汇","pos":"v.","posSrc":"manual"},{"w":"adequate","p":"/ˈædɪkwət/","m":"充分的，足够的；adequately 充分地；inadequate 不足的","g":"第二篇｜社会种族公平主题核心词汇","pos":"adj.","posSrc":"manual"},{"w":"unfairly","p":"/ˌʌnˈfeəli/","m":"不公平地","g":"第二篇｜社会种族公平主题核心词汇","pos":"adv.","posSrc":"manual"},{"w":"thorny","p":"/ˈθɔːni/","m":"棘手的（thorny issues，53题选项）","g":"第二篇｜社会种族公平主题核心词汇","pos":"adj.","posSrc":"manual"},{"w":"inclusive","p":"/ɪnˈkluːsɪv/","m":"包容的","g":"第二篇｜社会种族公平主题核心词汇","pos":"adj.","posSrc":"manual"},{"w":"divided","p":"/dɪˈvaɪdɪd/","m":"分裂的，有分歧的","g":"第二篇｜社会种族公平主题核心词汇","pos":"adj.","posSrc":"manual"},{"w":"truly","p":"/ˈtruːli/","m":"真正地","g":"第二篇｜社会种族公平主题核心词汇","pos":"adv.","posSrc":"manual"},{"w":"deeply","p":"/ˈdiːpli/","m":"深深地","g":"第二篇｜社会种族公平主题核心词汇","pos":"adv.","posSrc":"manual"},{"w":"related to","p":"","m":"与……相关","g":"第二篇｜社会种族公平主题核心词汇","pos":"短语","posSrc":"doc"},{"w":"fail to do sth","p":"","m":"未能做某事","g":"第二篇｜社会种族公平主题核心词汇","pos":"短语","posSrc":"doc"},{"w":"head-on","p":"","m":"正面地，直接地","g":"第二篇｜社会种族公平主题核心词汇","pos":"adv.","posSrc":"manual"},{"w":"commit to doing sth","p":"","m":"致力于做某事","g":"第二篇｜社会种族公平主题核心词汇","pos":"短语","posSrc":"doc"},{"w":"have a long way to go","p":"","m":"还有很长的路要走","g":"第二篇｜社会种族公平主题核心词汇","pos":"短语","posSrc":"doc"},{"w":"on the path toward…","p":"","m":"在通往……的道路上","g":"第二篇｜社会种族公平主题核心词汇","pos":"短语","posSrc":"doc"},{"w":"bury one’s head in the sand","p":"","m":"逃避现实（习语）","g":"第二篇｜社会种族公平主题核心词汇","pos":"短语","posSrc":"doc"},{"w":"solidarity","p":"/ˌsɒlɪˈdærəti/","m":"团结；休戚与共（本文中心词）","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"n.","posSrc":"manual"},{"w":"communitarianism","p":"/kəˌmjuːnɪˈteəriənɪzəm/","m":"社群主义","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"n.","posSrc":"manual"},{"w":"individualism","p":"/ˌɪndɪˈvɪdʒuəlɪzəm/","m":"个人主义","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"n.","posSrc":"manual"},{"w":"autonomy","p":"/ɔːˈtɒnəmi/","m":"自主；自主权","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"n.","posSrc":"manual"},{"w":"cohesiveness","p":"/kəʊˈhiːsɪvnəs/","m":"凝聚力；团结性","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"n.","posSrc":"manual"},{"w":"interdependent","p":"/ˌɪntədɪˈpendənt/","m":"相互依存的","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"adj.","posSrc":"manual"},{"w":"like-minded","p":"","m":"志趣相投的","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"adj.","posSrc":"manual"},{"w":"affirmative","p":"/əˈfɜːmətɪv/","m":"肯定的","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"adj.","posSrc":"manual"},{"w":"multifaceted","p":"/ˌmʌltiˈfæsɪtɪd/","m":"多方面的；多元化的","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"adj.","posSrc":"manual"},{"w":"exclusive","p":"/ɪkˈskluːsɪv/","m":"排他的；独有的","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"adj.","posSrc":"manual"},{"w":"unrestricted","p":"/ˌʌnrɪˈstrɪktɪd/","m":"不受限制的","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"adj.","posSrc":"manual"},{"w":"genuine","p":"/ˈdʒenjuɪn/","m":"真正的，真实的","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"adj.","posSrc":"manual"},{"w":"vulnerable","p":"/ˈvʌlnərəbl/","m":"脆弱的；弱势的","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"adj.","posSrc":"manual"},{"w":"shallow","p":"/ˈʃæləʊ/","m":"肤浅的，浅薄的","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"adj.","posSrc":"manual"},{"w":"thrive","p":"/θraɪv/","m":"繁荣，蓬勃发展；茁壮成长","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"v.","posSrc":"manual"},{"w":"restrict","p":"/rɪˈstrɪkt/","m":"限制，约束","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"v.","posSrc":"manual"},{"w":"sacrifice","p":"/ˈsækrɪfaɪs/","m":"牺牲","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"n.","posSrc":"manual"},{"w":"hinder","p":"/ˈhɪndə(r)/","m":"阻碍，妨碍","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"v.","posSrc":"manual"},{"w":"strengthen","p":"/ˈstreŋθn/","m":"加强，巩固","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"v.","posSrc":"manual"},{"w":"take on","p":"","m":"呈现；具有（某种特征）","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"短语","posSrc":"doc"},{"w":"bring about","p":"","m":"导致，带来","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"短语","posSrc":"doc"},{"w":"in the light of","p":"","m":"根据，鉴于","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"短语","posSrc":"doc"},{"w":"stand up for","p":"","m":"支持，维护","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"短语","posSrc":"doc"},{"w":"adhere to","p":"","m":"坚持，恪守","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"短语","posSrc":"doc"},{"w":"consciousness","p":"/ˈkɒnʃəsnəs/","m":"意识","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"n.","posSrc":"manual"},{"w":"facet","p":"/ˈfæsɪt/","m":"方面，层面","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"n.","posSrc":"manual"},{"w":"division of labor","p":"","m":"劳动分工","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"短语","posSrc":"doc"},{"w":"preference","p":"/ˈprefrəns/","m":"偏好","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"n.","posSrc":"manual"},{"w":"individuality","p":"/ˌɪndɪˌvɪdʒuˈæləti/","m":"个性，个体性","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"n.","posSrc":"manual"},{"w":"hindrance","p":"/ˈhɪndrəns/","m":"阻碍物，障碍","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"n.","posSrc":"manual"},{"w":"theorist","p":"/ˈθɪərɪst/","m":"理论家","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"n.","posSrc":"manual"},{"w":"dignity","p":"/ˈdɪɡnəti/","m":"尊严","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"n.","posSrc":"manual"},{"w":"calculation","p":"/ˌkælkjuˈleɪʃn/","m":"算计；计算","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"n.","posSrc":"manual"},{"w":"bond","p":"/bɒnd/","m":"纽带，联结；v. 建立联系","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"v.","posSrc":"doc"},{"w":"principle","p":"/ˈprɪnsəpl/","m":"原则","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"n.","posSrc":"manual"},{"w":"cause","p":"/kɔːz/","m":"事业；理想","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"n.","posSrc":"manual"},{"w":"existence","p":"/ɪɡˈzɪstəns/","m":"存在","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"n.","posSrc":"manual"},{"w":"common good","p":"","m":"公共利益，共同福祉","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"短语","posSrc":"doc"},{"w":"collective consciousness","p":"","m":"集体意识","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"短语","posSrc":"doc"},{"w":"micro version","p":"","m":"缩影","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"短语","posSrc":"doc"},{"w":"fast-changing environment","p":"","m":"瞬息万变的环境","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"短语","posSrc":"doc"},{"w":"social cohesiveness","p":"","m":"社会凝聚力","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"短语","posSrc":"doc"},{"w":"common interest","p":"","m":"共同利益","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"短语","posSrc":"doc"},{"w":"strategic calculations","p":"","m":"功利算计","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"短语","posSrc":"doc"},{"w":"human dignity","p":"","m":"人的尊严","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"短语","posSrc":"doc"},{"w":"the most vulnerable","p":"","m":"弱势群体","g":"第三篇｜Passage One（团结 / 社群主义）","pos":"短语","posSrc":"doc"},{"w":"advice","p":"/ədˈvaɪs/","m":"建议，忠告","g":"第四篇｜Passage Two（不请自来的建议）","pos":"n.","posSrc":"manual"},{"w":"unsolicited advice","p":"","m":"主动给出的建议、不请自来的建议（本文高频）","g":"第四篇｜Passage Two（不请自来的建议）","pos":"短语","posSrc":"doc"},{"w":"self-worth","p":"/ˌself ˈwɜːθ/","m":"自我价值感","g":"第四篇｜Passage Two（不请自来的建议）","pos":"n.","posSrc":"manual"},{"w":"tendency","p":"/ˈtendənsi/","m":"倾向，趋势","g":"第四篇｜Passage Two（不请自来的建议）","pos":"n.","posSrc":"manual"},{"w":"guise","p":"/ɡaɪz/","m":"外表，伪装","g":"第四篇｜Passage Two（不请自来的建议）","pos":"n.","posSrc":"manual"},{"w":"unselfishness","p":"/ʌnˈselfɪʃnəs/","m":"无私","g":"第四篇｜Passage Two（不请自来的建议）","pos":"n.","posSrc":"manual"},{"w":"vulnerability","p":"/ˌvʌlnərəˈbɪləti/","m":"脆弱性；emotional vulnerability 情绪脆弱","g":"第四篇｜Passage Two（不请自来的建议）","pos":"n.","posSrc":"manual"},{"w":"discomfort","p":"/dɪsˈkʌmfət/","m":"不适，不安","g":"第四篇｜Passage Two（不请自来的建议）","pos":"n.","posSrc":"manual"},{"w":"anxiety","p":"/æŋˈzaɪəti/","m":"焦虑","g":"第四篇｜Passage Two（不请自来的建议）","pos":"n.","posSrc":"manual"},{"w":"recipient","p":"/rɪˈsɪpiənt/","m":"接收者","g":"第四篇｜Passage Two（不请自来的建议）","pos":"n.","posSrc":"manual"},{"w":"manipulative","p":"/məˈnɪpjələtɪv/","m":"操纵他人的 → manipulation n. 操控","g":"第四篇｜Passage Two（不请自来的建议）","pos":"n.","posSrc":"doc"},{"w":"rejection","p":"/rɪˈdʒekʃn/","m":"拒绝","g":"第四篇｜Passage Two（不请自来的建议）","pos":"n.","posSrc":"manual"},{"w":"threat","p":"/θret/","m":"威胁","g":"第四篇｜Passage Two（不请自来的建议）","pos":"n.","posSrc":"manual"},{"w":"fight-or-flight response","p":"","m":"战斗或逃跑反应（应激反应）","g":"第四篇｜Passage Two（不请自来的建议）","pos":"短语","posSrc":"doc"},{"w":"conflict","p":"/ˈkɒnflɪkt/","m":"冲突","g":"第四篇｜Passage Two（不请自来的建议）","pos":"n.","posSrc":"manual"},{"w":"validation","p":"/ˌvælɪˈdeɪʃn/","m":"认可，确认","g":"第四篇｜Passage Two（不请自来的建议）","pos":"n.","posSrc":"manual"},{"w":"narrative","p":"/ˈnærətɪv/","m":"说法，叙述","g":"第四篇｜Passage Two（不请自来的建议）","pos":"n.","posSrc":"manual"},{"w":"boundary","p":"/ˈbaʊndəri/","m":"界限，边界","g":"第四篇｜Passage Two（不请自来的建议）","pos":"n.","posSrc":"manual"},{"w":"offence","p":"/əˈfens/","m":"冒犯 → offended 被冒犯的","g":"第四篇｜Passage Two（不请自来的建议）","pos":"n.","posSrc":"manual"},{"w":"annoyance","p":"/əˈnɔɪəns/","m":"恼怒","g":"第四篇｜Passage Two（不请自来的建议）","pos":"n.","posSrc":"manual"},{"w":"safety","p":"/ˈseɪfti/","m":"安全感","g":"第四篇｜Passage Two（不请自来的建议）","pos":"n.","posSrc":"manual"},{"w":"unwanted","p":"/ˌʌnˈwɒntɪd/","m":"不受欢迎的","g":"第四篇｜Passage Two（不请自来的建议）","pos":"adj.","posSrc":"manual"},{"w":"well-meaning","p":"/ˌwel ˈmiːnɪŋ/","m":"善意的，好心的","g":"第四篇｜Passage Two（不请自来的建议）","pos":"adj.","posSrc":"manual"},{"w":"genuinely","p":"/ˈdʒenjuɪnli/","m":"真诚地，真正地","g":"第四篇｜Passage Two（不请自来的建议）","pos":"adv.","posSrc":"manual"},{"w":"opposite","p":"/ˈɒpəzɪt/","m":"相反的","g":"第四篇｜Passage Two（不请自来的建议）","pos":"adj.","posSrc":"manual"},{"w":"problematic","p":"/ˌprɒbləˈmætɪk/","m":"有问题的","g":"第四篇｜Passage Two（不请自来的建议）","pos":"adj.","posSrc":"manual"},{"w":"excessive","p":"/ɪkˈsesɪv/","m":"过度的","g":"第四篇｜Passage Two（不请自来的建议）","pos":"adj.","posSrc":"manual"},{"w":"outright","p":"/ˈaʊtraɪt/","m":"直接的，坦率的","g":"第四篇｜Passage Two（不请自来的建议）","pos":"adj.","posSrc":"manual"},{"w":"damaging","p":"/ˈdæmɪdʒɪŋ/","m":"有伤害性的","g":"第四篇｜Passage Two（不请自来的建议）","pos":"adj.","posSrc":"manual"},{"w":"tactfully","p":"/ˈtæktfəli/","m":"委婉地，得体地","g":"第四篇｜Passage Two（不请自来的建议）","pos":"adv.","posSrc":"manual"},{"w":"reasonable","p":"/ˈriːznəbl/","m":"合理的","g":"第四篇｜Passage Two（不请自来的建议）","pos":"adj.","posSrc":"manual"},{"w":"underlying","p":"/ˌʌndəˈlaɪɪŋ/","m":"潜在的，深层的","g":"第四篇｜Passage Two（不请自来的建议）","pos":"adj.","posSrc":"manual"},{"w":"seek power","p":"","m":"谋求权力、想要掌控感","g":"第四篇｜Passage Two（不请自来的建议）","pos":"短语","posSrc":"doc"},{"w":"be driven to do","p":"","m":"被迫/受驱使去做","g":"第四篇｜Passage Two（不请自来的建议）","pos":"短语","posSrc":"doc"},{"w":"be aware of","p":"","m":"意识到","g":"第四篇｜Passage Two（不请自来的建议）","pos":"短语","posSrc":"doc"},{"w":"validate","p":"/ˈvælɪdeɪt/","m":"认可，证实","g":"第四篇｜Passage Two（不请自来的建议）","pos":"v.","posSrc":"manual"},{"w":"respond to","p":"","m":"回应","g":"第四篇｜Passage Two（不请自来的建议）","pos":"短语","posSrc":"doc"},{"w":"react harshly","p":"","m":"反应激烈","g":"第四篇｜Passage Two（不请自来的建议）","pos":"短语","posSrc":"doc"},{"w":"accuse sb of","p":"","m":"指责某人……","g":"第四篇｜Passage Two（不请自来的建议）","pos":"短语","posSrc":"doc"},{"w":"double down on","p":"","m":"坚持，变本加厉","g":"第四篇｜Passage Two（不请自来的建议）","pos":"短语","posSrc":"doc"},{"w":"prioritize","p":"/praɪˈɒrətaɪz/","m":"优先处理","g":"第四篇｜Passage Two（不请自来的建议）","pos":"v.","posSrc":"manual"},{"w":"self-regulate","p":"/ˌself ˈreɡjuleɪt/","m":"自我调节（情绪）","g":"第四篇｜Passage Two（不请自来的建议）","pos":"v.","posSrc":"manual"},{"w":"diffuse","p":"/dɪˈfjuːz/","m":"缓和（矛盾），平息","g":"第四篇｜Passage Two（不请自来的建议）","pos":"v.","posSrc":"manual"},{"w":"contribute to","p":"","m":"促成，有助于","g":"第四篇｜Passage Two（不请自来的建议）","pos":"短语","posSrc":"doc"},{"w":"result in","p":"","m":"导致","g":"第四篇｜Passage Two（不请自来的建议）","pos":"短语","posSrc":"doc"},{"w":"crave","p":"/kreɪv/","m":"渴望，渴求","g":"第四篇｜Passage Two（不请自来的建议）","pos":"v.","posSrc":"manual"},{"w":"set boundaries","p":"","m":"设立界限","g":"第四篇｜Passage Two（不请自来的建议）","pos":"短语","posSrc":"doc"},{"w":"under the guise of","p":"","m":"在……的伪装之下","g":"第四篇｜Passage Two（不请自来的建议）","pos":"短语","posSrc":"doc"},{"w":"a high tendency to do sth","p":"","m":"很倾向于做某事","g":"第四篇｜Passage Two（不请自来的建议）","pos":"短语","posSrc":"doc"},{"w":"take a long time to calm down","p":"","m":"很久才能平静下来","g":"第四篇｜Passage Two（不请自来的建议）","pos":"短语","posSrc":"doc"},{"w":"intended outcome","p":"","m":"预期结果","g":"第四篇｜Passage Two（不请自来的建议）","pos":"短语","posSrc":"doc"},{"w":"emotional safety","p":"","m":"情绪安全感","g":"第四篇｜Passage Two（不请自来的建议）","pos":"短语","posSrc":"doc"},{"w":"underlying reasons","p":"","m":"深层原因","g":"第四篇｜Passage Two（不请自来的建议）","pos":"短语","posSrc":"doc"},{"w":"mindfulness","p":"/ˈmaɪndfəlnəs/","m":"正念；觉知；留心","g":"第五篇｜Mindfulness 正念主题重点词汇","pos":"n.","posSrc":"manual"},{"w":"chronic","p":"/ˈkrɒnɪk/","m":"慢性的；长期的；chronic illness 慢性病","g":"第五篇｜Mindfulness 正念主题重点词汇","pos":"adj.","posSrc":"manual"},{"w":"insight","p":"/ˈɪnsaɪt/","m":"洞见，深刻理解","g":"第五篇｜Mindfulness 正念主题重点词汇","pos":"n.","posSrc":"manual"},{"w":"capacity","p":"/kəˈpæsəti/","m":"能力；容量","g":"第五篇｜Mindfulness 正念主题重点词汇","pos":"n.","posSrc":"manual"},{"w":"craving","p":"/ˈkreɪvɪŋ/","m":"渴望，渴求","g":"第五篇｜Mindfulness 正念主题重点词汇","pos":"n.","posSrc":"manual"},{"w":"anticipate","p":"/ænˈtɪsɪpeɪt/","m":"预料，预期；anticipating events 预想还没发生的事","g":"第五篇｜Mindfulness 正念主题重点词汇","pos":"v.","posSrc":"manual"},{"w":"spiral","p":"/ˈspaɪrəl/","m":"不断恶化；螺旋式上升；spiral off into… 陷入（思绪）","g":"第五篇｜Mindfulness 正念主题重点词汇","pos":"v.","posSrc":"manual"},{"w":"calm","p":"/kɑːm/","m":"v. 使平静；adj. 平静的","g":"第五篇｜Mindfulness 正念主题重点词汇","pos":"v./adj.","posSrc":"doc"},{"w":"indifferent","p":"/ɪnˈdɪfrənt/","m":"冷漠的，漠不关心的","g":"第五篇｜Mindfulness 正念主题重点词汇","pos":"adj.","posSrc":"manual"},{"w":"fully present","p":"","m":"全然活在当下（本篇高频短语）","g":"第五篇｜Mindfulness 正念主题重点词汇","pos":"短语","posSrc":"doc"},{"w":"profound","p":"/prəˈfaʊnd/","m":"深刻的；深远的","g":"第五篇｜Mindfulness 正念主题重点词汇","pos":"adj.","posSrc":"manual"},{"w":"commodity","p":"/kəˈmɒdəti/","m":"商品，货品","g":"第五篇｜Mindfulness 正念主题重点词汇","pos":"n.","posSrc":"manual"},{"w":"target","p":"/ˈtɑːɡɪt/","m":"v. 瞄准，定向吸引；n. 目标；target our attention 抓取/定向吸引我们的注意力","g":"第五篇｜Mindfulness 正念主题重点词汇","pos":"v./n.","posSrc":"doc"},{"w":"perpetual","p":"/pəˈpetʃuəl/","m":"无休止的，持续不断的","g":"第五篇｜Mindfulness 正念主题重点词汇","pos":"adj.","posSrc":"manual"},{"w":"diversion","p":"/daɪˈvɜːʃn/","m":"转移注意力，消遣；a diversion from the present moment 让人脱离当下的事物","g":"第五篇｜Mindfulness 正念主题重点词汇","pos":"n.","posSrc":"manual"},{"w":"resist","p":"/rɪˈzɪst/","m":"抵抗，抵制","g":"第五篇｜Mindfulness 正念主题重点词汇","pos":"v.","posSrc":"manual"},{"w":"relish","p":"/ˈrelɪʃ/","m":"享受，品味","g":"第五篇｜Mindfulness 正念主题重点词汇","pos":"v.","posSrc":"manual"},{"w":"assert","p":"/əˈsɜːt/","m":"断言，声称，主张","g":"第五篇｜Mindfulness 正念主题重点词汇","pos":"v.","posSrc":"manual"},{"w":"conducive","p":"/kənˈdjuːsɪv/","m":"有益的，有助于；be conducive to…（49题选项高频）","g":"第五篇｜Mindfulness 正念主题重点词汇","pos":"adj.","posSrc":"manual"},{"w":"forge","p":"/fɔːdʒ/","m":"建立（关系）；锻造；forge relationships 建立人际关系","g":"第五篇｜Mindfulness 正念主题重点词汇","pos":"v.","posSrc":"manual"},{"w":"reactivity","p":"/ˌriːækˈtɪvəti/","m":"应激反应，本能反应","g":"第五篇｜Mindfulness 正念主题重点词汇","pos":"n.","posSrc":"manual"},{"w":"judgment","p":"/ˈdʒʌdʒmənt/","m":"评判，判断","g":"第五篇｜Mindfulness 正念主题重点词汇","pos":"n.","posSrc":"manual"},{"w":"compassion","p":"/kəmˈpæʃn/","m":"同情，怜悯；compassionately 富有同情心地","g":"第五篇｜Mindfulness 正念主题重点词汇","pos":"n.","posSrc":"manual"},{"w":"distraction","p":"/dɪˈstrækʃn/","m":"使人分心的事物","g":"第五篇｜Mindfulness 正念主题重点词汇","pos":"n.","posSrc":"manual"},{"w":"refrain","p":"/rɪˈfreɪn/","m":"克制，忍住；refrain from doing sth 克制不去做某事（50题选项短语）","g":"第五篇｜Mindfulness 正念主题重点词汇","pos":"v.","posSrc":"manual"},{"w":"suffer from","p":"","m":"患有；遭受","g":"第五篇｜Mindfulness 正念主题重点词汇","pos":"短语","posSrc":"doc"},{"w":"be caught up in","p":"","m":"陷入，被……裹挟","g":"第五篇｜Mindfulness 正念主题重点词汇","pos":"短语","posSrc":"doc"},{"w":"react to","p":"","m":"对……作出反应","g":"第五篇｜Mindfulness 正念主题重点词汇","pos":"短语","posSrc":"doc"},{"w":"rests on","p":"","m":"依赖，建立在……之上","g":"第五篇｜Mindfulness 正念主题重点词汇","pos":"短语","posSrc":"doc"},{"w":"tie up in","p":"","m":"深陷于，被……缠住","g":"第五篇｜Mindfulness 正念主题重点词汇","pos":"短语","posSrc":"doc"},{"w":"put away","p":"","m":"放下（手机）","g":"第五篇｜Mindfulness 正念主题重点词汇","pos":"短语","posSrc":"doc"},{"w":"turn off","p":"","m":"关掉（社交媒体）","g":"第五篇｜Mindfulness 正念主题重点词汇","pos":"短语","posSrc":"doc"},{"w":"focus attention on","p":"","m":"把注意力集中于","g":"第五篇｜Mindfulness 正念主题重点词汇","pos":"短语","posSrc":"doc"},{"w":"endorse","p":"/ɪnˈdɔːs/","m":"支持，赞同（48D选项）","g":"第五篇｜Mindfulness 正念主题重点词汇","pos":"v.","posSrc":"manual"},{"w":"prevalent","p":"/ˈprevələnt/","m":"盛行的，普遍的（the prevalent use 广泛使用）","g":"第五篇｜Mindfulness 正念主题重点词汇","pos":"adj.","posSrc":"manual"},{"w":"inference","p":"/ˈɪnfərəns/","m":"推理，推断","g":"第六篇｜Passage One（推理与印随学习）","pos":"n.","posSrc":"manual"},{"w":"cornerstone","p":"/ˈkɔːnəstəʊn/","m":"基石；基础","g":"第六篇｜Passage One（推理与印随学习）","pos":"n.","posSrc":"manual"},{"w":"abstract","p":"/ˈæbstrækt/","m":"n. 抽象事物；摘要；adj. 抽象的","g":"第六篇｜Passage One（推理与印随学习）","pos":"n./adj.","posSrc":"doc"},{"w":"intelligence","p":"/ɪnˈtelɪdʒəns/","m":"智力，智能","g":"第六篇｜Passage One（推理与印随学习）","pos":"n.","posSrc":"manual"},{"w":"discrimination","p":"/dɪˌskrɪmɪˈneɪʃn/","m":"辨别；区分；歧视","g":"第六篇｜Passage One（推理与印随学习）","pos":"n.","posSrc":"manual"},{"w":"duckling","p":"/ˈdʌklɪŋ/","m":"小鸭，幼鸭","g":"第六篇｜Passage One（推理与印随学习）","pos":"n.","posSrc":"manual"},{"w":"review","p":"/rɪˈvjuː/","m":"评述；评审；复习","g":"第六篇｜Passage One（推理与印随学习）","pos":"n.","posSrc":"manual"},{"w":"experiment","p":"/ɪkˈsperɪmənt/","m":"实验","g":"第六篇｜Passage One（推理与印随学习）","pos":"n.","posSrc":"manual"},{"w":"spheres","p":"/sfɪəz/","m":"球体（sphere 的复数）","g":"第六篇｜Passage One（推理与印随学习）","pos":"n.","posSrc":"manual"},{"w":"imprinting","p":"/ˈɪmprɪntɪŋ/","m":"（动物）印随学习","g":"第六篇｜Passage One（推理与印随学习）","pos":"n.","posSrc":"manual"},{"w":"sensory input","p":"","m":"感官输入","g":"第六篇｜Passage One（推理与印随学习）","pos":"短语","posSrc":"doc"},{"w":"odor","p":"/ˈəʊdə(r)/","m":"气味","g":"第六篇｜Passage One（推理与印随学习）","pos":"n.","posSrc":"manual"},{"w":"primate","p":"/ˈpraɪmeɪt/","m":"灵长类动物","g":"第六篇｜Passage One（推理与印随学习）","pos":"n.","posSrc":"manual"},{"w":"context","p":"/ˈkɒntekst/","m":"背景；上下文","g":"第六篇｜Passage One（推理与印随学习）","pos":"n.","posSrc":"manual"},{"w":"infer","p":"/ɪnˈfɜː(r)/","m":"推断，推论","g":"第六篇｜Passage One（推理与印随学习）","pos":"v.","posSrc":"manual"},{"w":"view","p":"/vjuː/","m":"看作；认为","g":"第六篇｜Passage One（推理与印随学习）","pos":"v.","posSrc":"manual"},{"w":"challenge","p":"/ˈtʃælɪndʒ/","m":"挑战；质疑","g":"第六篇｜Passage One（推理与印随学习）","pos":"n.","posSrc":"manual"},{"w":"devise","p":"/dɪˈvaɪz/","m":"设计；想出（方案）","g":"第六篇｜Passage One（推理与印随学习）","pos":"v.","posSrc":"manual"},{"w":"expose","p":"/ɪkˈspəʊz/","m":"使接触；暴露","g":"第六篇｜Passage One（推理与印随学习）","pos":"v.","posSrc":"manual"},{"w":"prefer","p":"/prɪˈfɜː(r)/","m":"更喜欢","g":"第六篇｜Passage One（推理与印随学习）","pos":"v.","posSrc":"manual"},{"w":"discern","p":"/dɪˈsɜːn/","m":"分辨，识别","g":"第六篇｜Passage One（推理与印随学习）","pos":"v.","posSrc":"manual"},{"w":"compare","p":"/kəmˈpeə(r)/","m":"比较","g":"第六篇｜Passage One（推理与印随学习）","pos":"v.","posSrc":"manual"},{"w":"unique","p":"/juˈniːk/","m":"独有的，独特的","g":"第六篇｜Passage One（推理与印随学习）","pos":"adj.","posSrc":"manual"},{"w":"unintelligent","p":"/ˌʌnɪnˈtelɪdʒənt/","m":"不聪明的","g":"第六篇｜Passage One（推理与印随学习）","pos":"adj.","posSrc":"manual"},{"w":"experimental","p":"/ɪkˌsperɪˈmentl/","m":"实验性的","g":"第六篇｜Passage One（推理与印随学习）","pos":"adj.","posSrc":"manual"},{"w":"entirely","p":"/ɪnˈtaɪəli/","m":"完全地","g":"第六篇｜Passage One（推理与印随学习）","pos":"adv.","posSrc":"manual"},{"w":"mismatched","p":"/ˌmɪsˈmætʃt/","m":"不匹配的","g":"第六篇｜Passage One（推理与印随学习）","pos":"adj.","posSrc":"manual"},{"w":"rapid","p":"/ˈræpɪd/","m":"快速的","g":"第六篇｜Passage One（推理与印随学习）","pos":"adj.","posSrc":"manual"},{"w":"crucial","p":"/ˈkruːʃl/","m":"至关重要的","g":"第六篇｜Passage One（推理与印随学习）","pos":"adj.","posSrc":"manual"},{"w":"revolutionary","p":"/ˌrevəˈluːʃənəri/","m":"革命性的","g":"第六篇｜Passage One（推理与印随学习）","pos":"adj.","posSrc":"manual"},{"w":"make inferences from","p":"","m":"根据……进行推理","g":"第六篇｜Passage One（推理与印随学习）","pos":"短语","posSrc":"doc"},{"w":"once thought to be","p":"","m":"曾被认为是","g":"第六篇｜Passage One（推理与印随学习）","pos":"短语","posSrc":"doc"},{"w":"be present in","p":"","m":"存在于","g":"第六篇｜Passage One（推理与印随学习）","pos":"短语","posSrc":"doc"},{"w":"figure out","p":"","m":"弄清楚，想出","g":"第六篇｜Passage One（推理与印随学习）","pos":"短语","posSrc":"doc"},{"w":"move toward","p":"","m":"走向，朝……移动","g":"第六篇｜Passage One（推理与印随学习）","pos":"短语","posSrc":"doc"},{"w":"shortly after birth","p":"","m":"出生后不久","g":"第六篇｜Passage One（推理与印随学习）","pos":"短语","posSrc":"doc"},{"w":"without training","p":"","m":"未经训练","g":"第六篇｜Passage One（推理与印随学习）","pos":"短语","posSrc":"doc"},{"w":"far more necessary","p":"","m":"远比必要","g":"第六篇｜Passage One（推理与印随学习）","pos":"短语","posSrc":"doc"},{"w":"dietary","p":"/ˈdaɪətəri/","m":"饮食的","g":"第七篇｜饮食多样化主题","pos":"adj.","posSrc":"manual"},{"w":"diversity","p":"/daɪˈvɜːsəti/","m":"多样性；dietary diversity 饮食多样化","g":"第七篇｜饮食多样化主题","pos":"n.","posSrc":"manual"},{"w":"public health recommendation","p":"","m":"公共卫生建议","g":"第七篇｜饮食多样化主题","pos":"短语","posSrc":"doc"},{"w":"cardiovascular","p":"/ˌkɑːdiəʊˈvæskjələ(r)/","m":"心血管的","g":"第七篇｜饮食多样化主题","pos":"adj.","posSrc":"manual"},{"w":"warn","p":"/wɔːn/","m":"警告；告诫","g":"第七篇｜饮食多样化主题","pos":"v.","posSrc":"manual"},{"w":"calorie","p":"/ˈkæləri/","m":"卡路里；热量","g":"第七篇｜饮食多样化主题","pos":"n.","posSrc":"manual"},{"w":"correlation","p":"/ˌkɒrəˈleɪʃn/","m":"关联；相关性","g":"第七篇｜饮食多样化主题","pos":"n.","posSrc":"manual"},{"w":"intake","p":"/ˈɪnteɪk/","m":"摄入量","g":"第七篇｜饮食多样化主题","pos":"n.","posSrc":"manual"},{"w":"obesity","p":"/əʊˈbiːsəti/","m":"肥胖；肥胖症","g":"第七篇｜饮食多样化主题","pos":"n.","posSrc":"manual"},{"w":"contradict","p":"/ˌkɒntrəˈdɪkt/","m":"与……矛盾；抵触","g":"第七篇｜饮食多样化主题","pos":"v.","posSrc":"manual"},{"w":"consensus","p":"/kənˈsensəs/","m":"共识；一致意见","g":"第七篇｜饮食多样化主题","pos":"n.","posSrc":"manual"},{"w":"definition","p":"/ˌdefɪˈnɪʃn/","m":"定义","g":"第七篇｜饮食多样化主题","pos":"n.","posSrc":"manual"},{"w":"regimented","p":"/ˈredʒɪmentɪd/","m":"严格规划的；固定的","g":"第七篇｜饮食多样化主题","pos":"adj.","posSrc":"manual"},{"w":"anecdotal","p":"/ˌænɪkˈdəʊtl/","m":"轶事的；传闻的","g":"第七篇｜饮食多样化主题","pos":"adj.","posSrc":"manual"},{"w":"optimal","p":"/ˈɒptɪml/","m":"最佳的；最优的","g":"第七篇｜饮食多样化主题","pos":"adj.","posSrc":"manual"},{"w":"delay","p":"/dɪˈleɪ/","m":"推迟；延迟","g":"第七篇｜饮食多样化主题","pos":"v.","posSrc":"manual"},{"w":"fullness","p":"/ˈfʊlnəs/","m":"饱感；饱足","g":"第七篇｜饮食多样化主题","pos":"n.","posSrc":"manual"},{"w":"unprocessed","p":"/ˌʌnˈprəʊsest/","m":"未加工的","g":"第七篇｜饮食多样化主题","pos":"adj.","posSrc":"manual"}];
+const N = WORDS.length;
+const DAYS = [0,1,2,4,7,15];
+const KEY = 'dsh_vocab_v1';
+const MEM = {};
+let storageOk = true;
+try { localStorage.setItem('__t','1'); localStorage.removeItem('__t'); } catch(e){ storageOk = false; }
+const store = {
+  get(k){ try{ return storageOk ? localStorage.getItem(k) : (MEM[k]||null); }catch(e){ return MEM[k]||null; } },
+  set(k,v){ try{ if(storageOk) localStorage.setItem(k,v); else MEM[k]=v; }catch(e){ MEM[k]=v; } }
+};
+
+function today(){
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function addDays(iso, n){
+  const d = new Date(iso+'T00:00:00'); d.setDate(d.getDate()+n);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function fresh(){
+  return {boxes:{}, due:{}, newDate:today(), newCount:0, streak:0, lastDay:'', seen:0, good:0, goal:20};
+}
+let S = load();
+
+function load(){
+  let s;
+  try{ s = JSON.parse(store.get(KEY)||'null'); }catch(e){ s = null; }
+  if(!s || typeof s!=='object') s = fresh();
+  if(!s.boxes) s.boxes = {};
+  if(!s.due) s.due = {};
+  if(s.newDate !== today()){ s.newDate = today(); s.newCount = 0; }
+  if(!s.goal) s.goal = 20;
+  return s;
+}
+function save(){ store.set(KEY, JSON.stringify(S)); }
+
+/* ---------- 队列 ---------- */
+function dueIds(){
+  const t = today();
+  return Object.keys(S.boxes)
+    .filter(k => S.due[k] && S.due[k] <= t)
+    .map(Number)
+    .sort((a,b)=> (S.due[a]<S.due[b] ? -1 : 1));
+}
+function newIds(){ return Array.from({length:N},(_,i)=>i).filter(i => !S.boxes[i]); }
+function studyQueue(){
+  const q = dueIds();
+  const need = Math.max(0, S.goal - S.newCount);
+  q.push(...newIds().slice(0, need));
+  return q;
+}
+
+/* ---------- 卡片 ---------- */
+let queue = [], cur = -1, flipped = false;
+
+function renderCard(){
+  const card = document.getElementById('card');
+  if(queue.length === 0 || cur >= queue.length){
+    card.style.display = 'none';
+    document.getElementById('frontBtns').style.display = 'none';
+    document.getElementById('rateBtns').style.display = 'none';
+    document.getElementById('studyDone').style.display = 'flex';
+    updateChips(); renderList();
+    return;
+  }
+  card.style.display = 'flex';
+  document.getElementById('studyDone').style.display = 'none';
+  const w = WORDS[queue[cur]];
+  flipped = false;
+  document.getElementById('cWord').textContent = w.w;
+  var _p = document.getElementById('cPos');
+  if(_p){ _p.textContent = w.pos || ''; _p.className = 'pos' + (w.posSrc === 'guess' ? ' guess' : ''); _p.style.display = w.pos ? 'inline-block' : 'none'; }
+  document.getElementById('cPhon').textContent = w.p || '';
+  document.getElementById('cGroup').textContent = w.g || '';
+  document.getElementById('cIdx').textContent = (cur+1)+' / '+queue.length;
+  document.getElementById('cMean').textContent = w.m;
+  document.getElementById('cMean').style.display = 'none';
+  document.getElementById('cHint').style.display = 'block';
+  document.getElementById('frontBtns').style.display = 'block';
+  document.getElementById('rateBtns').style.display = 'none';
+  document.getElementById('progBar').style.width = Math.round(cur/queue.length*100)+'%';
+}
+
+function flip(){
+  if(flipped) return;
+  flipped = true;
+  document.getElementById('cMean').style.display = 'block';
+  document.getElementById('cHint').style.display = 'none';
+  document.getElementById('frontBtns').style.display = 'none';
+  document.getElementById('rateBtns').style.display = 'block';
+}
+
+function rate(q, id){
+  if(!S.boxes[id]) S.newCount++;
+  let box = S.boxes[id] || 0;
+  if(q === 3) box = Math.min(box + 1, 5);
+  else if(q === 2) box = Math.max(box, 1);
+  else box = 1;
+  S.boxes[id] = box;
+  S.due[id] = addDays(today(), DAYS[box]);
+  S.seen++; if(q===3) S.good++;
+  if(S.lastDay !== today()){
+    const y = addDays(today(), -1);
+    S.streak = (S.lastDay === y) ? (S.streak||0)+1 : 1;
+    S.lastDay = today();
+  }
+  save();
+}
+
+/* ---------- 复习 ---------- */
+let rqueue = [], rcur = 0, rflipped = false;
+function openReview(){
+  rqueue = dueIds(); rcur = 0;
+  document.getElementById('revBar').style.width = '0%';
+  if(rqueue.length === 0){
+    document.getElementById('rcard').style.display='none';
+    document.getElementById('rFront').style.display='none';
+    document.getElementById('rRate').style.display='none';
+    document.getElementById('reviewDone').style.display='flex';
+    return;
+  }
+  document.getElementById('reviewDone').style.display='none';
+  renderReview();
+}
+function renderReview(){
+  document.getElementById('rcard').style.display='flex';
+  document.getElementById('rFront').style.display='block';
+  document.getElementById('rRate').style.display='none';
+  rflipped = false;
+  const w = WORDS[rqueue[rcur]];
+  document.getElementById('rWord').textContent = w.w;
+  document.getElementById('rPhon').textContent = w.p || '';
+  document.getElementById('rGroup').textContent = w.g || '';
+  document.getElementById('rMean').textContent = w.m;
+  document.getElementById('rMean').style.display='none';
+  document.getElementById('revBar').style.width = Math.round(rcur/rqueue.length*100)+'%';
+}
+document.getElementById('rShow').onclick = ()=>{
+  if(rflipped) return;
+  rflipped = true;
+  document.getElementById('rMean').style.display='block';
+  document.getElementById('rFront').style.display='none';
+  document.getElementById('rRate').style.display='block';
+};
+document.querySelectorAll('#rRate .btn').forEach(b=>{
+  b.onclick = ()=>{
+    rate(parseInt(b.dataset.q,10), rqueue[rcur]);
+    rcur++;
+    if(rcur >= rqueue.length){
+      document.getElementById('rcard').style.display='none';
+      document.getElementById('rFront').style.display='none';
+      document.getElementById('rRate').style.display='none';
+      document.getElementById('reviewDone').style.display='flex';
+      document.getElementById('revBar').style.width='100%';
+      updateChips();
+    } else renderReview();
+  };
+});
+
+/* ---------- 词表 ---------- */
+function renderList(){
+  const q = (document.getElementById('search').value || '').trim().toLowerCase();
+  const box = document.getElementById('list');
+  const rows = [];
+  for(let i=0;i<N;i++){
+    const w = WORDS[i];
+    if(q && !(w.w.toLowerCase().includes(q) || w.m.includes(q))) continue;
+    const b = S.boxes[i] || 0;
+    const cls = b===0?'d0': b===1?'d1': b===2?'d2': b===3?'d3':'d4';
+    rows.push(`<div class="item" data-i="${i}">
+      <div class="l"><div class="w">${esc(w.w)}<span class="tiny">${esc(w.pos||"")}</span></div><div class="m">${esc(w.m)}</div></div>
+      <div class="dot ${cls}"></div></div>`);
+  }
+  box.innerHTML = rows.join('') || '<div class="empty">没有匹配的词</div>';
+}
+function esc(s){ return String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* ---------- 统计 ---------- */
+function updateChips(){
+  let master=0, learning=0, never=0;
+  for(let i=0;i<N;i++){
+    const b = S.boxes[i]||0;
+    if(b>=4) master++; else if(b>0) learning++; else never++;
+  }
+  document.getElementById('cToday').textContent = S.newCount;
+  document.getElementById('cGoal').textContent = S.goal;
+  document.getElementById('cStreak').textContent = S.streak||0;
+  document.getElementById('cMaster').textContent = master;
+  document.getElementById('sTotal').textContent = N;
+  document.getElementById('sMaster').textContent = master;
+  document.getElementById('sLearning').textContent = learning;
+  document.getElementById('sNew').textContent = never;
+  document.getElementById('sSeen').textContent = S.seen||0;
+  document.getElementById('sAcc').textContent = S.seen ? Math.round((S.good||0)/S.seen*100)+'%' : '—';
+  document.getElementById('goal').value = S.goal;
+  document.getElementById('goalVal').textContent = S.goal;
+}
+
+/* ---------- 设置 ---------- */
+document.getElementById('goal').oninput = e=>{
+  S.goal = parseInt(e.target.value,10); save(); updateChips();
+};
+document.getElementById('exportBtn').onclick = ()=>{
+  const ta = document.getElementById('io');
+  ta.style.display='block';
+  ta.value = JSON.stringify(S);
+  ta.select();
+  try{ document.execCommand('copy'); }catch(e){}
+  alert('已生成备份并尝试复制。长按文本框可手动复制。');
+};
+document.getElementById('importBtn').onclick = ()=>{
+  const ta = document.getElementById('io');
+  ta.style.display='block';
+  if(!ta.value.trim()){ alert('请先粘贴备份内容到文本框'); return; }
+  try{
+    const s = JSON.parse(ta.value);
+    if(!s.boxes) throw new Error('bad');
+    S = s; save(); updateChips(); renderList(); alert('导入成功');
+  }catch(e){ alert('备份格式不对'); }
+};
+document.getElementById('resetBtn').onclick = ()=>{
+  if(confirm('清空所有学习进度？不可恢复。')){
+    S = fresh(); save(); updateChips(); renderList(); queue=[]; cur=0; renderCard();
+  }
+};
+document.getElementById('search').oninput = renderList;
+
+/* ---------- 发音 ---------- */
+function speak(text){
+  try{
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'en-US'; u.rate = 0.85;
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
+  }catch(e){}
+}
+document.getElementById('cSpeak').onclick = ()=> speak(WORDS[queue[cur]] ? WORDS[queue[cur]].w : '');
+document.getElementById('rSpeak').onclick = ()=> speak(WORDS[rqueue[rcur]] ? WORDS[rqueue[rcur]].w : '');
+document.getElementById('cWord').onclick = ()=> flip();
+document.getElementById('btnShow').onclick = flip;
+document.querySelectorAll('#rateBtns .btn').forEach(b=>{
+  b.onclick = ()=>{
+    rate(parseInt(b.dataset.q,10), queue[cur]);
+    cur++; renderCard(); updateChips();
+  };
+});
+
+/* ---------- 导航 ---------- */
+document.querySelectorAll('nav button').forEach(b=>{
+  b.onclick = ()=>{
+    document.querySelectorAll('nav button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+    document.getElementById(b.dataset.v).classList.add('on');
+    if(b.dataset.v === 'vStudy'){
+      queue = studyQueue(); cur = 0; renderCard();
+    }
+    if(b.dataset.v === 'vReview') openReview();
+    if(b.dataset.v === 'vList') renderList();
+    if(b.dataset.v === 'vStats') updateChips();
+  };
+});
+
+/* ---------- 启动 ---------- */
+queue = studyQueue(); cur = 0;
+renderCard(); updateChips(); renderList();
+try{
+  document.getElementById('diag').textContent =
+    'v2 · 词 ' + N + ' · 协议 ' + location.protocol + ' · 存储 ' + (storageOk ? '可用' : '不可用（进度仅本次）');
+}catch(e){}
+</script>
+</body>
+</html>
